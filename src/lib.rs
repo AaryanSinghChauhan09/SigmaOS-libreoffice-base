@@ -1,66 +1,65 @@
-//! LibreOffice Base database frontend integration
-//!
-//! Subsystem component of SigmaOS following core architectural principles:
-//! DRY, KISS, SOLID, AAA testing, Separation of Concerns, Gall's Law.
+/// Database frontend component for SigmaOS (LibreOffice Base equivalent).
 
-/// Configuration contract for SigmaOS-libreoffice-base
 #[derive(Debug, Clone, PartialEq)]
-pub struct Config {
-    pub enabled: bool,
-    pub component_name: String,
-    pub tier: u8,
+pub enum ColumnType {
+    Integer,
+    Text,
+    Real,
+    Boolean,
+    Blob,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            enabled: true,
-            component_name: String::from("SigmaOS-libreoffice-base"),
-            tier: 4,
-        }
-    }
+#[derive(Debug, Clone)]
+pub struct ColumnDef {
+    pub name: String,
+    pub col_type: ColumnType,
+    pub nullable: bool,
 }
 
-/// State descriptor for SigmaOS-libreoffice-base
-#[derive(Debug, Clone, PartialEq)]
-pub struct State {
-    pub initialized: bool,
-    pub healthy: bool,
+#[derive(Debug, Clone)]
+pub struct TableSchema {
+    pub name: String,
+    pub columns: Vec<ColumnDef>,
 }
 
-/// Lifecycle supervisor for SigmaOS-libreoffice-base
-pub struct Supervisor {
-    config: Config,
-    state: State,
+#[derive(Debug)]
+pub struct Database {
+    pub name: String,
+    tables: Vec<TableSchema>,
 }
 
-impl Supervisor {
-    /// Create a new supervisor instance
-    pub fn new(config: Config) -> Self {
-        Supervisor {
-            config,
-            state: State {
-                initialized: false,
-                healthy: true,
-            },
+impl Database {
+    pub fn new(name: &str) -> Self {
+        Self {
+            name: name.to_string(),
+            tables: Vec::new(),
         }
     }
 
-    /// Start and initialize the component
-    pub fn initialize(&mut self) -> Result<String, String> {
-        if !self.config.enabled {
-            return Err(String::from("Component is administratively disabled"));
+    pub fn create_table(&mut self, schema: TableSchema) -> Result<(), String> {
+        if self.tables.iter().any(|t| t.name == schema.name) {
+            return Err(format!("Table '{}' already exists", schema.name));
         }
-        self.state.initialized = true;
-        Ok(format!(
-            "{} initialized successfully at tier {}",
-            self.config.component_name, self.config.tier
-        ))
+        self.tables.push(schema);
+        Ok(())
     }
 
-    /// Query current health
-    pub fn is_healthy(&self) -> bool {
-        self.state.initialized && self.state.healthy
+    pub fn drop_table(&mut self, name: &str) -> Result<(), String> {
+        let pos = self
+            .tables
+            .iter()
+            .position(|t| t.name == name)
+            .ok_or_else(|| format!("Table '{}' not found", name))?;
+        self.tables.remove(pos);
+        Ok(())
+    }
+
+    pub fn get_table(&self, name: &str) -> Option<&TableSchema> {
+        self.tables.iter().find(|t| t.name == name)
+    }
+
+    pub fn list_tables(&self) -> Vec<&str> {
+        self.tables.iter().map(|t| t.name.as_str()).collect()
     }
 }
 
@@ -68,61 +67,58 @@ impl Supervisor {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_default_configuration() {
-        // Arrange
-        let config = Config::default();
-
-        // Act
-        let is_enabled = config.enabled;
-        let tier_val = config.tier;
-
-        // Assert
-        assert!(is_enabled, "component must be enabled by default");
-        assert_eq!(tier_val, 4, "tier must match component contract");
+    fn make_schema(name: &str) -> TableSchema {
+        TableSchema {
+            name: name.to_string(),
+            columns: vec![ColumnDef {
+                name: "id".to_string(),
+                col_type: ColumnType::Integer,
+                nullable: false,
+            }],
+        }
     }
 
     #[test]
-    fn test_successful_initialization() {
+    fn test_create_table_aaa() {
         // Arrange
-        let config = Config::default();
-        let mut supervisor = Supervisor::new(config);
+        let mut db = Database::new("testdb");
+        let schema = make_schema("users");
 
         // Act
-        let result = supervisor.initialize();
+        let result = db.create_table(schema);
 
         // Assert
-        assert!(
-            result.is_ok(),
-            "initialization should succeed with valid config"
-        );
-        assert!(
-            supervisor.is_healthy(),
-            "component should report healthy state after init"
-        );
+        assert!(result.is_ok());
+        assert!(db.get_table("users").is_some());
     }
 
     #[test]
-    fn test_disabled_initialization_failure() {
+    fn test_drop_table_aaa() {
         // Arrange
-        let config = Config {
-            enabled: false,
-            component_name: String::from("SigmaOS-libreoffice-base"),
-            tier: 4,
-        };
-        let mut supervisor = Supervisor::new(config);
+        let mut db = Database::new("testdb");
+        db.create_table(make_schema("orders")).unwrap();
 
         // Act
-        let result = supervisor.initialize();
+        let result = db.drop_table("orders");
 
         // Assert
-        assert!(
-            result.is_err(),
-            "disabled component should reject initialization"
-        );
-        assert!(
-            !supervisor.is_healthy(),
-            "disabled component must not be marked healthy"
-        );
+        assert!(result.is_ok());
+        assert!(db.get_table("orders").is_none());
+    }
+
+    #[test]
+    fn test_list_tables_aaa() {
+        // Arrange
+        let mut db = Database::new("testdb");
+        db.create_table(make_schema("alpha")).unwrap();
+        db.create_table(make_schema("beta")).unwrap();
+
+        // Act
+        let tables = db.list_tables();
+
+        // Assert
+        assert_eq!(tables.len(), 2);
+        assert!(tables.contains(&"alpha"));
+        assert!(tables.contains(&"beta"));
     }
 }
