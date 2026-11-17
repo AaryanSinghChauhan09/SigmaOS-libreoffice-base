@@ -11,16 +11,19 @@ fn test_create_table_aaa() {
                 name: "id".to_string(),
                 col_type: ColumnType::Integer,
                 nullable: false,
+                primary_key: false,
             },
             ColumnDef {
                 name: "name".to_string(),
                 col_type: ColumnType::Text,
                 nullable: false,
+                primary_key: false,
             },
             ColumnDef {
                 name: "price".to_string(),
                 col_type: ColumnType::Real,
                 nullable: true,
+                primary_key: false,
             },
         ],
     };

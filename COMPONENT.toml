@@ -1,9 +1,16 @@
 [component]
 name = "SigmaOS-libreoffice-base"
-description = "SigmaOS LibreOffice Base - Database frontend and SQL table designer"
-version = "0.1.0"
 tier = 4
+stability = "beta"
+language = "rust"
+description = "In-memory relational database with schema, rows, queries, and CSV export"
+upstream = []
 
-[capabilities]
-contract_version = "1.0.0"
-principles = ["DRY", "KISS", "SOLID", "Arrange-Act-Assert", "Pristine-Sources", "Minimal-Kernel"]
+[contract]
+provides = ["database", "sql-frontend", "csv-export"]
+depends_on = []
+
+[maturity]
+status = "Implemented"
+test_evidence = "cargo test --offline unit tests pass"
+next_milestone = "SQL parser, indexes, transactions, and on-disk storage"
