@@ -1,6 +1,6 @@
 [component]
 name = "SigmaOS-libreoffice-base"
-description = "LibreOffice Base database frontend integration"
+description = "SigmaOS LibreOffice Base - Database frontend and SQL table designer"
 version = "0.1.0"
 tier = 4
 
